@@ -30,6 +30,8 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    socket.on('connect', () => console.log('touchpad connected', socket.id));
+    socket.on('server-message', (m) => console.log('server:', m));
     const pad = document.getElementById("pad");
 
     let lastTouch = null;
@@ -47,7 +49,9 @@
 
         tapTimer = setTimeout(() => {
           isDragging = true;
-          socket.emit("cursor-event", { type: "down" });
+          const ev = { type: "down" };
+          console.log('touchpad emit', ev);
+          socket.emit("cursor-event", ev);
         }, HOLD_DELAY);
       }
 
@@ -65,11 +69,9 @@
         const dy = t.clientY - lastTouch.clientY;
         lastTouch = t;
 
-        socket.emit("cursor-event", {
-          type: "move",
-          dx,
-          dy
-        });
+        const ev = { type: "move", dx, dy };
+        console.log('touchpad emit', ev);
+        socket.emit("cursor-event", ev);
       }
 
       if (e.touches.length === 2) {
@@ -88,7 +90,9 @@
       clearTimeout(tapTimer);
 
       if (isDragging) {
-        socket.emit("cursor-event", { type: "up" });
+        const ev = { type: "up" };
+        console.log('touchpad emit', ev);
+        socket.emit("cursor-event", ev);
         isDragging = false;
         return;
       }
@@ -97,11 +101,15 @@
 
       setTimeout(() => {
         if (tapCount === 1) {
-          socket.emit("cursor-event", { type: "click" });
+          const ev = { type: "click" };
+          console.log('touchpad emit', ev);
+          socket.emit("cursor-event", ev);
         }
 
         if (tapCount === 2) {
-          socket.emit("cursor-event", { type: "doubleClick" });
+          const ev = { type: "doubleClick" };
+          console.log('touchpad emit', ev);
+          socket.emit("cursor-event", ev);
         }
 
         tapCount = 0;

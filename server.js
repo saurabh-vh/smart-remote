@@ -16,12 +16,17 @@ app.use(express.static("public"));
 io.on("connection", (socket) => {
   console.log("socket connected:", socket.id);
 
+  // helpful debug: echo that the socket connected
+  socket.emit("server-message", { text: "connected", id: socket.id });
+
   socket.on("join-room", (room) => {
     socket.join(room);
     console.log(`${socket.id} joined room ${room}`);
   });
 
   socket.on("cursor-event", (data) => {
+    console.log("cursor-event from", socket.id, data && data.type, data && (data.room ? `room:${data.room}` : "broadcast"));
+
     if (data && data.room) {
       socket.to(data.room).emit("cursor-event", data);
     } else {

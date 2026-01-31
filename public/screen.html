@@ -51,6 +51,8 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+    socket.on('connect', () => console.log('screen connected', socket.id));
+    socket.on('server-message', (m) => console.log('server:', m));
     const cursor = document.getElementById("cursor");
     const container = document.getElementById("container");
     const iframe = document.getElementById("scene");
@@ -88,6 +90,7 @@
     }
 
     socket.on("cursor-event", (data) => {
+      console.log('screen received cursor-event', data);
       if (data.type === "move") {
         cursorX += data.dx * sensitivity;
         cursorY += data.dy * sensitivity;
