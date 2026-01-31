@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Touchpad</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: #222;
+      touch-action: none;
+    }
+
+    #pad {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(145deg, #333, #111);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #aaa;
+      font-size: 18px;
+      user-select: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="pad">Touchpad</div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const pad = document.getElementById("pad");
+
+    let lastTouch = null;
+    let tapTimer = null;
+    let tapCount = 0;
+    let isDragging = false;
+
+    const TAP_DELAY = 250;
+    const HOLD_DELAY = 120;
+
+    pad.addEventListener("touchstart", (e) => {
+      if (e.touches.length === 1) {
+        lastTouch = e.touches[0];
+        isDragging = false;
+
+        tapTimer = setTimeout(() => {
+          isDragging = true;
+          socket.emit("cursor-event", { type: "down" });
+        }, HOLD_DELAY);
+      }
+
+      if (e.touches.length === 2) {
+        socket.emit("cursor-event", { type: "scrollStart" });
+      }
+    });
+
+    pad.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+
+      if (e.touches.length === 1 && lastTouch) {
+        const t = e.touches[0];
+        const dx = t.clientX - lastTouch.clientX;
+        const dy = t.clientY - lastTouch.clientY;
+        lastTouch = t;
+
+        socket.emit("cursor-event", {
+          type: "move",
+          dx,
+          dy
+        });
+      }
+
+      if (e.touches.length === 2) {
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const avgY = (t1.clientY + t2.clientY) / 2;
+
+        socket.emit("cursor-event", {
+          type: "scroll",
+          dy: avgY
+        });
+      }
+    }, { passive: false });
+
+    pad.addEventListener("touchend", () => {
+      clearTimeout(tapTimer);
+
+      if (isDragging) {
+        socket.emit("cursor-event", { type: "up" });
+        isDragging = false;
+        return;
+      }
+
+      tapCount++;
+
+      setTimeout(() => {
+        if (tapCount === 1) {
+          socket.emit("cursor-event", { type: "click" });
+        }
+
+        if (tapCount === 2) {
+          socket.emit("cursor-event", { type: "doubleClick" });
+        }
+
+        tapCount = 0;
+      }, TAP_DELAY);
+    });
+  </script>
+</body>
+</html>

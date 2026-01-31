@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>3D Screen</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #container {
+      position: relative;
+      width: 90vw;
+      height: 90vh;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    #cursor {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      background: red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 1000;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+    <iframe
+      id="scene"
+      src="https://virtual-homes.s3.ap-south-1.amazonaws.com/RaymondRealty/RaymondRealtywadala/Address+by+GS+Wadala_28_jan_3/index.html">
+    </iframe>
+
+    <!-- <div id="cursor"></div> -->
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const cursor = document.getElementById("cursor");
+    const container = document.getElementById("container");
+    const iframe = document.getElementById("scene");
+
+    let cursorX = container.clientWidth / 2;
+    let cursorY = container.clientHeight / 2;
+    let isMouseDown = false;
+
+    const sensitivity = 1.2;
+
+    function clamp() {
+      cursorX = Math.max(0, Math.min(container.clientWidth, cursorX));
+      cursorY = Math.max(0, Math.min(container.clientHeight, cursorY));
+    }
+
+    function updateCursor() {
+      clamp();
+      cursor.style.left = cursorX + "px";
+      cursor.style.top = cursorY + "px";
+    }
+
+    updateCursor();
+
+    function dispatchToIframe(type) {
+      const rect = iframe.getBoundingClientRect();
+
+      const event = new MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        clientX: rect.left + cursorX,
+        clientY: rect.top + cursorY
+      });
+
+      iframe.contentWindow.dispatchEvent(event);
+    }
+
+    socket.on("cursor-event", (data) => {
+      if (data.type === "move") {
+        cursorX += data.dx * sensitivity;
+        cursorY += data.dy * sensitivity;
+        updateCursor();
+
+        if (isMouseDown) {
+          dispatchToIframe("mousemove");
+        }
+      }
+
+      if (data.type === "down") {
+        isMouseDown = true;
+        dispatchToIframe("mousedown");
+      }
+
+      if (data.type === "up") {
+        isMouseDown = false;
+        dispatchToIframe("mouseup");
+        dispatchToIframe("click");
+      }
+    });
+  </script>
+</body>
+</html>
